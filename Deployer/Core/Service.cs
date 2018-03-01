@@ -9,13 +9,10 @@ namespace Deployer.Core
 {
     public class Service: ICloneable
     {
-        public Service()
-        {
-            Version = "0.0";
-        }
+        
 
         public string ExeName { get; set; }// имя exe файла 
-        public string ServicePath { get; set; }// путь к ехе файлу
+        public string ServicePath { get; set; }// путь к  сервису
         public string ServiceName { get; set; }// имя сервиса
         public string Version { get; set; }// версия
         public string FullPath
@@ -23,7 +20,9 @@ namespace Deployer.Core
             get { return ServicePath + "\\" + ExeName; }
         }
 
-
+        public Service()
+        {
+        }
         public Service(string exePath)
         {
             ExeName = System.IO.Path.GetFileName(exePath);

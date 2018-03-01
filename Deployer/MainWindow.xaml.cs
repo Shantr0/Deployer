@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -26,13 +27,42 @@ namespace Deployer
     /// </summary>
     public partial class MainWindow : Window
     {
-        private List<ServiceConfig> services=new List<ServiceConfig>();
+        private ServiceList services=new ServiceList();
+
+        private void LogMessage(string message)
+        {
+            Output.AppendText(DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss")+ " " + message +'\n');
+        }
+        public void saveConfigs()
+        {
+            string jsonServices = JsonConvert.SerializeObject(services, Formatting.Indented);
+            string path = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "Services.json");
+            File.WriteAllText(path, jsonServices);
+            LogMessage($"конфигурация  сохранена: {path} ");
+        }
+        public void SaveConfigs(string fileName)
+        {
+            string jsonServices = JsonConvert.SerializeObject(services, Formatting.Indented);
+            string path = fileName;
+            File.WriteAllText(path, jsonServices);
+            LogMessage($"конфигурация  сохранена: {path}");
+        }
         public MainWindow()
         {
             InitializeComponent();
             Init();
         }
 
+        public ServiceConfig GetSelected()
+        {
+            int index = ServiceTable.SelectedIndex;
+            if (index >= 0)
+            {
+                var config = services[index];
+                return config;
+            }
+            else return null;
+        }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog dialog=new OpenFileDialog(){Filter = "exe files (*.exe)|*.exe" };
@@ -40,37 +70,65 @@ namespace Deployer
             {
                 string fname = dialog.FileName;
                 Service service=new Service(fname);
-                ServiceConfig config=new ServiceConfig(service,"");
+                service.Version = "";
+                ServiceConfig config=new ServiceConfig(service,"");// sourcePath пока пустой
                 services.Add(config);
-                ServiceTable.ItemsSource = services;
-                Output.AppendText($"{fname} добавлен");
+                //ServiceTable.ItemsSource = services;
+                LogMessage($"{fname} добавлен");
             }
         }
 
         private void saveButton_Click(object sender, RoutedEventArgs e)
         {
-            string jsonServices = JsonConvert.SerializeObject(services, Formatting.Indented);
-            //string jsonServices = ReflectionAnalyser.ToJsonString(services);
-            string path = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "Services.json") ;
-            File.WriteAllText(path, jsonServices);
-            Output.AppendText($"конфигурация  сохранена: " + path);
+            saveConfigs();
         }
 
         private void Init()
         {
             string file = "Services.json";
             string text= File.ReadAllText(file);
-            services = ReflectionAnalyser.ReadFromJsonString<List<ServiceConfig>>(text);
+            services = ReflectionAnalyser.ReadFromJsonString<ServiceList>(text);
+            if(services==null)services=new ServiceList();
             ServiceTable.ItemsSource = services;
+            services.AddingNew += AddElement;
+            services.ListChanged += ListChange;
         }
 
-
+        private void AddElement(object sender, AddingNewEventArgs args)
+        {
+            saveConfigs();
+        }
+        private void ListChange(object sender, ListChangedEventArgs args)
+        {
+            //saveConfigs();
+        }
         private void changeButton_Click(object sender, RoutedEventArgs e)
         {
-            int index = ServiceTable.SelectedIndex;
-            var config= services[index];
-            ServiceConfigWindow window=new ServiceConfigWindow(config);
-            window.ShowDialog();
+            var config = GetSelected();
+            if (config != null)
+            {
+                ServiceConfigWindow window = new ServiceConfigWindow(this);
+                window.ShowDialog();
+            }
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            ServiceConfig config = GetSelected();
+            Output.AppendText("сборка началась \n");
+            try
+            {
+                if (config != null)
+                {
+                    config.Build();
+                    LogMessage("сборка успешно завершена");
+                }
+            }
+            catch (Exception ex)
+            {
+                Output.AppendText(ex.Message);
+            }
+            
         }
     }
 }

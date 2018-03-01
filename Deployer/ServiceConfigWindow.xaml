@@ -5,9 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Deployer"
         mc:Ignorable="d"
-        Title="ServiceConfigWindow" Height="412.903" Width="675.269">
+        Title="ServiceConfigWindow" Height="474.903" Width="675.269">
     <Grid Margin="0,0,-155,0">
-        <DataGrid x:Name="ServiceVersionsTable" Margin="10,10,168,119" AutoGenerateColumns="False">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="355*"/>
+            <ColumnDefinition Width="467*"/>
+        </Grid.ColumnDefinitions>
+        <DataGrid x:Name="ServiceVersionsTable" Margin="10,10,168,145" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" Grid.ColumnSpan="2">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding ServiceName}" ClipboardContentBinding="{x:Null}" Header="Name"/>
                 <DataGridTextColumn Binding="{Binding ServicePath}" ClipboardContentBinding="{x:Null}" Header="Service path"/>
@@ -15,12 +19,16 @@
                 <DataGridTextColumn Binding="{Binding Version}" ClipboardContentBinding="{x:Null}" Header="Version"/>
             </DataGrid.Columns>
         </DataGrid>
-        <Button x:Name="BackupButton" Content="Backup" HorizontalAlignment="Left" Margin="566,0,0,13" Width="75" Height="23" VerticalAlignment="Bottom" Click="BackupButton_Click"/>
-        <Button x:Name="DeployButton" Content="Deploy" HorizontalAlignment="Left" Margin="456,347,0,0" VerticalAlignment="Top" Width="75" Click="DeployButton_Click"/>
-        <TextBox x:Name="NewVersionTextBox" HorizontalAlignment="Left" Height="23" Margin="492,287,0,0" TextWrapping="Wrap" Text="New version" VerticalAlignment="Top" Width="120" RenderTransformOrigin="0.307,-0.215"/>
-        <TextBox x:Name="LogTextBox" HorizontalAlignment="Left" Height="48" Margin="26,287,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="441" IsReadOnly="True"/>
-        <Button x:Name="DeleteButton" Content="Delete version" HorizontalAlignment="Left" Margin="26,347,0,0" VerticalAlignment="Top" Width="89" Click="DeleteButton_Click"/>
-        <Button x:Name="ServiceLauncherButton" Content="Start/Stop" HorizontalAlignment="Left" Margin="193,347,0,0" VerticalAlignment="Top" Width="75" Click="ServiceLauncherButton_Click"/>
+        <Button x:Name="BackupButton" Content="Backup" Margin="0,0,168,10" Click="BackupBuildButton_Click" Grid.Column="1" HorizontalAlignment="Right" Width="75" Height="23" VerticalAlignment="Bottom"/>
+        <Button x:Name="DeployButton" Content="Deploy" Margin="0,0,168,45" Click="DeployButton_Click" Height="23" VerticalAlignment="Bottom" Grid.Column="1" HorizontalAlignment="Right" Width="75"/>
+        <TextBox x:Name="NewVersionTextBox" HorizontalAlignment="Left" Margin="179,0,0,104" TextWrapping="Wrap" Text="New version" Width="120" RenderTransformOrigin="0.307,-0.215" Height="23" VerticalAlignment="Bottom" Grid.Column="1"/>
+        <TextBox x:Name="LogTextBox" HorizontalAlignment="Left" Margin="26,0,0,79" TextWrapping="Wrap" Width="441" IsReadOnly="True" Height="48" VerticalAlignment="Bottom" Grid.ColumnSpan="2"/>
+        <Button x:Name="DeleteButton" Content="Delete version" HorizontalAlignment="Left" Margin="150,0,0,45" Width="89" Click="DeleteButton_Click" Height="23" VerticalAlignment="Bottom"/>
+        <Button x:Name="ServiceLauncherButton" Content="Start/Stop" HorizontalAlignment="Left" Margin="26,0,0,45" Width="75" Click="ServiceLauncherButton_Click" Height="23" VerticalAlignment="Bottom"/>
+        <Button x:Name="SaveChangeButton" Content="Save" HorizontalAlignment="Left" Margin="26,0,0,10" Width="75" Click="SaveChangeButton_Click" Height="23" VerticalAlignment="Bottom"/>
+        <Button x:Name="BuildButton" Content="Build" HorizontalAlignment="Left" Margin="150,0,0,10" Width="89" Click="BuildButton_Click" Height="23" VerticalAlignment="Bottom"/>
+        <Label Content="текущая версия" Grid.Column="1" HorizontalAlignment="Left" Margin="67,374,0,0" VerticalAlignment="Top" Width="97"/>
+        <Label x:Name="ActualVersionLabel" Content="" Grid.Column="1" HorizontalAlignment="Left" Margin="67,405,0,0" VerticalAlignment="Top" Width="97"/>
 
     </Grid>
 </Window>
