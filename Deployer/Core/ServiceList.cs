@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace Deployer.Core
 {
-    public class ServiceList:BindingList<ServiceConfig>
+    public class ServiceList:BindingList<ServiceConfigState>
     {
         private string configsPath;
 

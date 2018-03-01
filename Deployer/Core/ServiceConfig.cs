@@ -42,14 +42,18 @@ namespace Deployer.Core
             return currentVersion != null;
         }
 
+        public ServiceConfig()
+        {
+            baseService = new Service();
+        }
         public ServiceConfig(string exePath, string sourcePath)
         {
             Service service=new Service(exePath);
             baseService = service;
             SourcePath = sourcePath;
             Init();
-            if (!IsMultiversion) AddVersion("");
-            else AddVersion(service.Version);
+            if (!IsMultiversion) AddVersion("",true);
+            else AddVersion(service.Version,true);
             CurrentVersion = service.Version;
         }
         public ServiceConfig(Service service, string sourcePath)// создание конфигурации сервиса service с уазанием источника обновлений sourcePath
@@ -66,7 +70,7 @@ namespace Deployer.Core
         //{
         //    if(IsMultiversion)
         //}
-        public void AddVersion(string version,bool setAsCurrent=true)
+        public void AddVersion(string version,bool setAsCurrent)
         {
             AddVersion(version,CreateVersionFolderName(version),setAsCurrent);
         }
@@ -119,7 +123,7 @@ namespace Deployer.Core
                 File.Copy(file.FullName, newName,true);
             }
         }
-        public string BackupService(string newVersion,List<string> ignoreFiles=null)
+        public string BackupService(string newVersion, bool changeExistVersion, List<string> ignoreFiles=null)
         {
             string backupFolder;
             //if(!IsBuilded())throw new ArgumentException($"не найден собранный экземпляр. Выполните сборку перед созданием резервной копии");
@@ -132,7 +136,7 @@ namespace Deployer.Core
             {
                 backupFolder = DeployPath + "_backup";
             }
-            return BackupService(newVersion,backupFolder,ignoreFiles);
+            return BackupService(newVersion,backupFolder,changeExistVersion,ignoreFiles);
         }
 
         //public string BackupService(string oldVersion, string newVersion, string backupDirectory, List<string> ignoreFiles = null)
@@ -154,19 +158,22 @@ namespace Deployer.Core
             Versions.Remove(delVersion);
         }
 
-        public string BackupService(string newVersion,string sourceDirectory, string backupDirectory, List<string> ignoreFiles = null)
+        public string BackupService(string newVersion,string sourceDirectory, string backupDirectory,bool changeExistVersion, List<string> ignoreFiles = null)
         {
-            if (Versions.ContainsKey(newVersion) && IsMultiversion) return ($"версия ({Versions}) уже существует");
+            if (Versions.ContainsKey(newVersion) && IsMultiversion && !changeExistVersion) return ($"версия ({Versions}) уже существует");
             Directory.CreateDirectory(backupDirectory);
-            if (IsMultiversion) AddVersion(newVersion, false);
-            else if (!Versions.ContainsKey(newVersion)) AddVersion("backup",false);
+            if (IsMultiversion) AddVersion(newVersion,backupDirectory, false);
+            else if (!Versions.ContainsKey(newVersion))
+                AddVersion("backup",backupDirectory, false);
+            else
+                Versions[newVersion] = backupDirectory;
             if(backupDirectory!=sourceDirectory)
                 CopyFiles(sourceDirectory, backupDirectory, ignoreFiles);
             return "done";
         }
-        public string BackupService(string newVersion, string backupDirectory, List<string> ignoreFiles = null)
+        public string BackupService(string newVersion, string backupDirectory, bool changeExistVersion, List<string> ignoreFiles = null)
         {
-            return BackupService(newVersion, DeployPath, backupDirectory, ignoreFiles);
+            return BackupService(newVersion, DeployPath, backupDirectory, changeExistVersion,ignoreFiles);
             // генерим событие по добавлению версиии
 
         }
@@ -184,32 +191,38 @@ namespace Deployer.Core
 
         public void BackupService(List<string> ignoreFiles = null)
         {
-            if(!IsMultiversion) BackupService("");
+            if(!IsMultiversion) BackupService("",true);
         }
         public void StopService()
         {
             ServiceController ser = new System.ServiceProcess.ServiceController(ServiceName);
-            ser.Stop();
+            if(ser.Status!=ServiceControllerStatus.Stopped) ser.Stop();
+            ser.WaitForStatus(ServiceControllerStatus.Stopped);
         }
         public void StartService()
         {
             ServiceController ser = new System.ServiceProcess.ServiceController(ServiceName);
-            ser.Start();
+            if (ser.Status != ServiceControllerStatus.Running) ser.Start();
+            ser.WaitForStatus(ServiceControllerStatus.Running);
         }
         
-        public void Build()// первоначальная сборка
+        public void Build()// первоначальная сборка/ обновление
         {
             Directory.CreateDirectory(DeployPath);
             CopyFiles(SourcePath,DeployPath);
             CurrentVersion = baseService.Version;
             if (Versions.Count==0) AddVersion(CurrentVersion,true);
         }
-        public void Build(string version) // сборка существующей версии
+        public void Build(string version) // сборка новой версии из источника обновлений
+        {
+            Build(version,SourcePath);
+        }
+        public void Build(string version,string versionPath) // сборка существующей версии из директории версии
         {
             Directory.CreateDirectory(DeployPath);
             //string sourcePath = Versions[version];
-            if(SourcePath!=DeployPath)
-                CopyFiles(SourcePath, DeployPath);
+            if (versionPath != DeployPath)
+                CopyFiles(versionPath, DeployPath);
             if (!IsMultiversion)
             {
                 CurrentVersion = "";
@@ -217,10 +230,12 @@ namespace Deployer.Core
             else CurrentVersion = version;
         }
 
-        public string GetVersionBackupFolder(string version)
+        public void Rollback(string version)
         {
-            return Versions[version];
+            string verPath = Versions[version];
+            Build(version,verPath);
         }
+
         public void Init()
         {
             if(baseService==null) baseService=new Service();
@@ -237,7 +252,7 @@ namespace Deployer.Core
                 var newService = (Service) baseService.Clone();
                 newService.ServicePath = Versions[version];
                 newService.ServiceName = ServiceName;
-                newService.ExeName = ServiceName;
+                newService.ExeName = ExeFile;
                 newService.Version = version;
                 services.Add(newService);
             }

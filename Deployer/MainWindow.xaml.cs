@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,7 +34,19 @@ namespace Deployer
         {
             Output.AppendText(DateTime.Now.ToString("dd/MM/yyyy hh:mm:ss")+ " " + message +'\n');
         }
-        public void saveConfigs()
+        private void Error(Exception e)
+        {
+            Output.AppendText(e.Message + '\n');
+            Output.AppendText(e.StackTrace + '\n');
+            Output.AppendText(e.Source + '\n');
+            Output.AppendText(e.Data.ToString());
+            //log.Error(e.Message);
+            //log.Error(e.StackTrace);
+            //log.Error(e.Source);
+            //log.Error(e.Data.ToString());
+            if (e.InnerException != null) Error(e.InnerException);
+        }
+        public void SaveConfigs()
         {
             string jsonServices = JsonConvert.SerializeObject(services, Formatting.Indented);
             string path = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "Services.json");
@@ -56,12 +69,20 @@ namespace Deployer
         public ServiceConfig GetSelected()
         {
             int index = ServiceTable.SelectedIndex;
-            if (index >= 0)
+
+            try
             {
-                var config = services[index];
-                return config;
+                if (index >= 0)
+                {
+                    var config = services[index];
+                    return config;
+                }
+                else return null;
             }
-            else return null;
+            catch (Exception e)
+            {
+                return null;
+            }
         }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -71,7 +92,7 @@ namespace Deployer
                 string fname = dialog.FileName;
                 Service service=new Service(fname);
                 service.Version = "";
-                ServiceConfig config=new ServiceConfig(service,"");// sourcePath пока пустой
+                ServiceConfigState config=new ServiceConfigState(service,"");// sourcePath пока пустой
                 services.Add(config);
                 //ServiceTable.ItemsSource = services;
                 LogMessage($"{fname} добавлен");
@@ -80,7 +101,7 @@ namespace Deployer
 
         private void saveButton_Click(object sender, RoutedEventArgs e)
         {
-            saveConfigs();
+            SaveConfigs();
         }
 
         private void Init()
@@ -89,6 +110,7 @@ namespace Deployer
             string text= File.ReadAllText(file);
             services = ReflectionAnalyser.ReadFromJsonString<ServiceList>(text);
             if(services==null)services=new ServiceList();
+            else foreach (var service in services) { service.UpdateStatus(); }
             ServiceTable.ItemsSource = services;
             services.AddingNew += AddElement;
             services.ListChanged += ListChange;
@@ -96,11 +118,11 @@ namespace Deployer
 
         private void AddElement(object sender, AddingNewEventArgs args)
         {
-            saveConfigs();
+            SaveConfigs();
         }
         private void ListChange(object sender, ListChangedEventArgs args)
         {
-            //saveConfigs();
+            SaveConfigs();
         }
         private void changeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -115,20 +137,62 @@ namespace Deployer
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             ServiceConfig config = GetSelected();
-            Output.AppendText("сборка началась \n");
+            
             try
             {
                 if (config != null)
                 {
+                    Output.AppendText("сборка началась");
                     config.Build();
                     LogMessage("сборка успешно завершена");
                 }
+            }
+            catch (ArgumentException exception)
+            {
+                if(string.IsNullOrEmpty(config.SourcePath)) LogMessage("не задан источник обновлений");
+                Output.AppendText(exception.Message);
             }
             catch (Exception ex)
             {
                 Output.AppendText(ex.Message);
             }
             
+        }
+
+        private void ServiceLauncherButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                int index = ServiceTable.SelectedIndex;
+                ServiceConfig config = GetSelected();
+                if(config==null)return;
+                ServiceController ser = new ServiceController(config.ServiceName);
+                LogMessage($"статус службы {ser.Status}");
+
+                if (ser.Status == ServiceControllerStatus.Running)
+                {
+                    config.StopService();
+                    ser.Refresh();
+                    //ser.WaitForStatus(ServiceControllerStatus.Stopped);
+                }
+                else if (ser.Status == ServiceControllerStatus.Stopped || ser.Status == ServiceControllerStatus.Paused)
+                {
+                    config.StartService();
+                    ser.Refresh();
+                    //ser.WaitForStatus(ServiceControllerStatus.Running);
+                }
+                //DataGridRow row=(DataGridRow) ServiceTable.SelectedItem;
+                //row.Item=ser.Status;
+                LogMessage($"статус службы изменен на {ser.Status}");
+                services[index].UpdateStatus();
+                ServiceTable.ItemsSource = null;
+                ServiceTable.ItemsSource = services;
+                //ServiceTable.SelectedIndex = index;
+            }
+            catch (Exception exception)
+            {
+                Error(exception);
+            }
         }
     }
 }

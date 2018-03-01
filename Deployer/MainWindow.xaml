@@ -17,18 +17,22 @@
             <ColumnDefinition Width="695*"/>
         </Grid.ColumnDefinitions>
         <Button x:Name="AddButton" Content="Добавить" Margin="0,0,302,-142" Click="Button_Click" Height="23" VerticalAlignment="Bottom" Grid.Column="1" HorizontalAlignment="Right" Width="75" Grid.Row="1"/>
-        <DataGrid x:Name="ServiceTable" Margin="10,10,186,10" Grid.ColumnSpan="2" ItemsSource="{Binding services}" AutoGenerateColumns="False" Grid.RowSpan="2">
+        <DataGrid x:Name="ServiceTable" Margin="10,10,186,10" Grid.ColumnSpan="2" ItemsSource="{Binding services}" AutoGenerateColumns="False" Grid.RowSpan="2" CanUserAddRows="False">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding ServiceName}"  Header="Название"/>
                 <DataGridTextColumn Binding="{Binding DeployPath}"  Header="Директория развертывания"/>
                 <DataGridTextColumn Binding="{Binding SourcePath}"  Header="Ресурс"/>
                 <DataGridCheckBoxColumn x:Name="MultiVersionCheckBox" Binding="{Binding IsMultiversion}"  Header="Мультиверсионный" />
+                <DataGridTextColumn x:Name="VersionColumn" Header="Версия" Binding="{Binding CurrentVersion}"/>
+                <DataGridTextColumn x:Name="StatusColumn" Header="Статус" Binding="{Binding Status}"/>
+
             </DataGrid.Columns>
         </DataGrid>
         <Button x:Name="changeButton" Content="инфо" HorizontalAlignment="Right" Margin="0,0,402,-142" Width="75" Height="23" VerticalAlignment="Bottom" Grid.Column="1" Click="changeButton_Click" Grid.Row="1" />
         <Button x:Name="saveButton" Content="сохранить" HorizontalAlignment="Left" Margin="52,0,0,-142" Width="75" Click="saveButton_Click" Height="23" VerticalAlignment="Bottom" RenderTransformOrigin="6.127,11.575" Grid.Row="1"/>
-        <TextBox x:Name="Output" HorizontalAlignment="Left" Height="71" Margin="28,97,0,-97" TextWrapping="Wrap" VerticalAlignment="Top" Width="880" Grid.ColumnSpan="2" IsReadOnlyCaretVisible="True" Grid.Row="1" VerticalScrollBarVisibility="Visible" AcceptsReturn="True"/>
+        <TextBox x:Name="Output" HorizontalAlignment="Left" Height="71" Margin="28,97,0,-97" TextWrapping="Wrap" VerticalAlignment="Top" Width="880" Grid.ColumnSpan="2" IsReadOnlyCaretVisible="True" Grid.Row="1" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" IsReadOnly="True"/>
         <Button Content="Build" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="182,190,0,-142" Grid.Row="1" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>
+        <Button x:Name="ServiceLauncherButton" Content="Start/Stop" HorizontalAlignment="Left" Height="23" Margin="222,190,0,-142" Grid.Row="1" VerticalAlignment="Top" Width="75" Click="ServiceLauncherButton_Click"/>
 
     </Grid>
 </Window>

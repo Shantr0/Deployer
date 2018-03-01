@@ -73,23 +73,26 @@ namespace Deployer
             _changed = true;
         }
 
-        private string BackupService(string newVersion)
+        private string BackupService(string newVersion,bool saveExistVersion)
         {
-            string res= config.BackupService(newVersion);
+            string res;
+            if (CheckBoxPath.IsChecked == false) res = config.BackupService(newVersion, saveExistVersion);
+            else res = config.BackupService(newVersion, PathTextBox.Text,saveExistVersion);
             Save();
             return res;
         }
         private void Save()
         {
             LogMessage("сохраняется конфигурация");
-            window.saveConfigs();
+            window.SaveConfigs();
             _changed = false;
             LogMessage("конфигурация сохранена");
         }
 
         private void refresh()
         {
-            ServiceVersionsTable.ItemsSource = services;
+            services =new BindingList<Service>(config.GetAllVersionServices());
+            ServiceVersionsTable.ItemsSource =services;
             ActualVersionLabel.Content = config.CurrentVersion;
             //ServiceVersionsTable.UpdateLayout();
         }
@@ -113,18 +116,19 @@ namespace Deployer
         }
         public void DeployService(string newVersion)// развертывание новой версии
         {
+            string newversion = config.IsMultiversion ? newVersion : "backup";
             int status = 0;
             try
             {
                 LogMessage("создается резервная копия сервиса");
-                string result= BackupService(actualVersion);
+                string result= BackupService(newversion,true);// сохраняется бэкап version
                 status++;//1
                 if (result == "done") LogMessage("копия успешно создана, останавливаю сервис");
                 else LogMessage(result);
                 config.StopService();
                 status++;//2
                 LogMessage(config.ServiceName+" остановлен, устанавливается обновление");
-                config.Build(newVersion);
+                config.Build(actualVersion);
                 status++;//3
                 LogMessage("обновление завершено, запускаю сервис");
                 config.StartService();
@@ -140,7 +144,7 @@ namespace Deployer
         public void Rollback(string version)// откат на существующую версию version
         {
             config.StopService();
-            config.Build(version);
+            config.Rollback(version);
             config.StartService();
         }
         private void BackupBuildButton_Click(object sender, RoutedEventArgs e)
@@ -149,9 +153,9 @@ namespace Deployer
             {
                 
                 string newVersion = config.IsMultiversion ? NewVersionTextBox.Text : "backup";
-                BackupService(newVersion);
+                BackupService(newVersion,false);
                 services = new BindingList<Service>(config.GetAllVersionServices());
-                ServiceVersionsTable.ItemsSource = services;
+                //ServiceVersionsTable.ItemsSource = services;
                 LogMessage("резервная копия " + newVersion + " cоздана");
                 refresh();
             }
@@ -164,10 +168,20 @@ namespace Deployer
         private void DeployButton_Click(object sender, RoutedEventArgs e)
         {
             string newVersion = NewVersionTextBox.Text;
+            int index = ServiceVersionsTable.SelectedIndex;
+            if(index<0)return;
             LogMessage("начинается развертывание приложения");
-            DeployService(newVersion);
-            LogMessage("Приложение успешно развернуто");
-            refresh();
+            try
+            {
+                DeployService(newVersion);
+                LogMessage("Приложение успешно развернуто");
+                refresh();
+            }
+            catch (Exception exception)
+            {
+                Error(exception);
+            }
+            
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
@@ -180,7 +194,7 @@ namespace Deployer
                 config.DeleteVersion(version);
                 Save();
                 LogMessage(version + " удален");
-                services = new BindingList<Service>(config.GetAllVersionServices());
+                //services = new BindingList<Service>(config.GetAllVersionServices());
                 refresh();
             }
             catch (ArgumentOutOfRangeException ex)
@@ -196,27 +210,38 @@ namespace Deployer
 
         private void ServiceLauncherButton_Click(object sender, RoutedEventArgs e)
         {
-            System.ServiceProcess.ServiceController ser = new System.ServiceProcess.ServiceController(config.ServiceName);
-            LogMessage($"статус службы {ser.Status}");
-            if(ser.Status==ServiceControllerStatus.Running) config.StopService();
-            else if(ser.Status==ServiceControllerStatus.Stopped || ser.Status==ServiceControllerStatus.Paused) config.StartService();
-            LogMessage($"статус службы изменен на {ser.Status}");
+            
         }
 
         private void SaveChangeButton_Click(object sender, RoutedEventArgs e)
         {
-            Save();
+            try
+            {
+                Save();
+            }
+            catch (Exception exception)
+            {
+                LogMessage("ошибка сохранения");
+                Error(exception);
+            }
         }
 
         private void BuildButton_Click(object sender, RoutedEventArgs e)
         {
             string version = GetSelectedVersion();
-            if (version != null) config.Build(version);
-            actualVersion = config.CurrentVersion;
-            ActualVersionLabel.Content = actualVersion;
-            LogMessage("Перестроение завершено, текущая версия"+actualVersion);
-            refresh();
-            Save();
+            try
+            {
+                if (version != null) config.Build(version);
+                actualVersion = config.CurrentVersion;
+                ActualVersionLabel.Content = actualVersion;
+                LogMessage("Перестроение завершено, текущая версия"+actualVersion);
+                refresh();
+                Save();
+            }
+            catch (Exception exception)
+            {
+                Error(exception);
+            }
         }
     }
 }
