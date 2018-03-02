@@ -152,12 +152,20 @@ namespace Deployer.Core
 
         public void DeleteVersion(string delVersion)
         {
-            if(delVersion==currentVersion)throw new InvalidOperationException($"Удаление действующей версии недопустимо");
+            if (delVersion == currentVersion)
+            {
+                var ex= new InvalidOperationException($"Удаление действующей версии недопустимо");
+                ex.Data.Add("version",delVersion);
+                throw ex;
+            }
             string path = Versions[delVersion];
             Directory.Delete(path,true);
             Versions.Remove(delVersion);
         }
-
+        public string BackupService(string newVersion, string sourceDirectory, string backupDirectory, List<string> ignoreFiles = null)
+        {
+            return BackupService(newVersion, sourceDirectory, backupDirectory, false, ignoreFiles);
+        }
         public string BackupService(string newVersion,string sourceDirectory, string backupDirectory,bool changeExistVersion, List<string> ignoreFiles = null)
         {
             if (Versions.ContainsKey(newVersion) && IsMultiversion && !changeExistVersion) return ($"версия ({Versions}) уже существует");
@@ -174,6 +182,11 @@ namespace Deployer.Core
         public string BackupService(string newVersion, string backupDirectory, bool changeExistVersion, List<string> ignoreFiles = null)
         {
             return BackupService(newVersion, DeployPath, backupDirectory, changeExistVersion,ignoreFiles);
+            // генерим событие по добавлению версиии
+        }
+        public string BackupService(string newVersion, string backupDirectory, List<string> ignoreFiles = null)
+        {
+            return BackupService(newVersion, DeployPath, backupDirectory, ignoreFiles);
             // генерим событие по добавлению версиии
 
         }
@@ -210,7 +223,7 @@ namespace Deployer.Core
         {
             Directory.CreateDirectory(DeployPath);
             CopyFiles(SourcePath,DeployPath);
-            CurrentVersion = baseService.Version;
+            //CurrentVersion = baseService.Version;
             if (Versions.Count==0) AddVersion(CurrentVersion,true);
         }
         public void Build(string version) // сборка новой версии из источника обновлений

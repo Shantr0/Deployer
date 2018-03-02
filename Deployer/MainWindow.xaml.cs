@@ -68,21 +68,23 @@ namespace Deployer
 
         public ServiceConfig GetSelected()
         {
-            int index = ServiceTable.SelectedIndex;
-
-            try
-            {
-                if (index >= 0)
-                {
-                    var config = services[index];
-                    return config;
-                }
-                else return null;
-            }
-            catch (Exception e)
-            {
-                return null;
-            }
+            //int index = ServiceTable.SelectedIndex;
+            ServiceConfigState selectedConfigState =(ServiceConfigState) ServiceTable.SelectedItem;
+            return selectedConfigState;
+            //try
+            //{
+            //    if (index >= 0)
+            //    {
+            //        var config= services[index]=selectedConfigState;
+            //        return config;
+            //    }
+            //    else return null;
+            //}
+            //catch (Exception e)
+            //{
+            //    LogMessage(e.Message);
+            //    return null;
+            //}
         }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -142,9 +144,9 @@ namespace Deployer
             {
                 if (config != null)
                 {
-                    Output.AppendText("сборка началась");
+                    LogMessage("проводится обновление");
                     config.Build();
-                    LogMessage("сборка успешно завершена");
+                    LogMessage("обновление завершено");
                 }
             }
             catch (ArgumentException exception)

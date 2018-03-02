@@ -47,14 +47,15 @@ namespace Deployer
 
         private string GetSelectedVersion()
         {
-            int index = ServiceVersionsTable.SelectedIndex;
-            string[] versions = config.Versions.Keys.ToArray();
-            if (index >= 0)
-            {
-                string v = versions[index];
-                return v;
-            }
-            return null;
+            var item =(Service) ServiceVersionsTable.SelectedItem;
+            return item.Version;
+            //string[] versions = config.Versions.Keys.ToArray();
+            //if (index >= 0)
+            //{
+            //    string v = versions[index];
+            //    return v;
+            //}
+            //return null;
         }
         private void Init()
         {
@@ -73,27 +74,28 @@ namespace Deployer
             _changed = true;
         }
 
-        private string BackupService(string newVersion,bool saveExistVersion)
+        private string BackupService(string newVersion,bool saveExistVersion=false)
         {
             string res;
-            if (CheckBoxPath.IsChecked == false) res = config.BackupService(newVersion, saveExistVersion);
+            if (CheckBoxPath.IsChecked == false)
+                res = config.BackupService(newVersion, saveExistVersion);
             else res = config.BackupService(newVersion, PathTextBox.Text,saveExistVersion);
             Save();
             return res;
         }
         private void Save()
         {
-            LogMessage("сохраняется конфигурация");
             window.SaveConfigs();
             _changed = false;
             LogMessage("конфигурация сохранена");
         }
 
-        private void refresh()
+        private void Refresh()
         {
             services =new BindingList<Service>(config.GetAllVersionServices());
             ServiceVersionsTable.ItemsSource =services;
             ActualVersionLabel.Content = config.CurrentVersion;
+            ServiceVersionsTable.SelectedIndex = 0;
             //ServiceVersionsTable.UpdateLayout();
         }
         private void LogMessage(string message)
@@ -107,33 +109,53 @@ namespace Deployer
             LogTextBox.AppendText(e.Message+'\n');
             LogTextBox.AppendText(e.StackTrace+'\n');
             LogTextBox.AppendText(e.Source+'\n');
-            LogTextBox.AppendText(e.Data.ToString());
+            LogTextBox.AppendText(e.Data.ToString()+'\n');
             log.Error(e.Message);
             log.Error(e.StackTrace);
             log.Error(e.Source);
             log.Error(e.Data.ToString());
             if (e.InnerException != null) Error(e.InnerException);
         }
-        public void DeployService(string newVersion)// развертывание новой версии
+        public void DeployService(string version)// развертывание новой версии
         {
-            string newversion = config.IsMultiversion ? newVersion : "backup";
-            int status = 0;
+            bool typeNew = RadioButtonNewVersion.IsChecked == true;// создавать новую версию
+            string deployVersion;
+            if (typeNew)
+                deployVersion = config.IsMultiversion ? version : "backup"; // бэкап и развертывание новой версии 
+            else deployVersion = version;// деплой существующей версии (откат)
+            DeployState status=0;
             try
             {
-                LogMessage("создается резервная копия сервиса");
-                string result= BackupService(newversion,true);// сохраняется бэкап version
-                status++;//1
-                if (result == "done") LogMessage("копия успешно создана, останавливаю сервис");
-                else LogMessage(result);
-                config.StopService();
-                status++;//2
-                LogMessage(config.ServiceName+" остановлен, устанавливается обновление");
-                config.Build(actualVersion);
-                status++;//3
-                LogMessage("обновление завершено, запускаю сервис");
-                config.StartService();
-                status++;//4
-                LogMessage($"сервис {config.ServiceName} запущен успешно");
+                if (typeNew)
+                {
+                    LogMessage("создается резервная копия сервиса...");
+                    string result = BackupService(deployVersion, true);// сохраняется бэкап version
+                    status=DeployState.Backuped;//1
+                    if (result == "done") LogMessage("копия успешно создана, останавливаю сервис...");
+                    else LogMessage(result);
+                    config.StopService();
+                    status++;//2
+                    LogMessage(config.ServiceName + " остановлен, устанавливается обновление...");
+                    config.Build(deployVersion);
+                    status++;//3
+                    LogMessage("обновление завершено, запускаю сервис...");
+                    config.StartService();
+                    status++;//4
+                    LogMessage($"сервис {config.ServiceName} запущен успешно");
+                }
+                else
+                {
+                    LogMessage("Останавливается сервис...");
+                    config.StopService();
+                    status = DeployState.Stopped;
+                    LogMessage(config.ServiceName + " остановлен, устанавливается новая версия");
+                    config.Rollback(version);
+                    status = DeployState.Builded;
+                    LogMessage("обновление завершено, запускаю сервис...");
+                    config.StartService();
+                    status = DeployState.Started;
+                    LogMessage($"сервис {config.ServiceName} запущен успешно");
+                }
             }
             catch (Exception e)
             {
@@ -157,7 +179,7 @@ namespace Deployer
                 services = new BindingList<Service>(config.GetAllVersionServices());
                 //ServiceVersionsTable.ItemsSource = services;
                 LogMessage("резервная копия " + newVersion + " cоздана");
-                refresh();
+                Refresh();
             }
             catch (Exception exception)
             {
@@ -175,7 +197,7 @@ namespace Deployer
             {
                 DeployService(newVersion);
                 LogMessage("Приложение успешно развернуто");
-                refresh();
+                Refresh();
             }
             catch (Exception exception)
             {
@@ -195,12 +217,16 @@ namespace Deployer
                 Save();
                 LogMessage(version + " удален");
                 //services = new BindingList<Service>(config.GetAllVersionServices());
-                refresh();
+                Refresh();
+                
             }
-            catch (ArgumentOutOfRangeException ex)
+            catch (InvalidOperationException ex) when (ex.Data.Contains("version"))
             {
-                if(config.Versions.Count==0)
-                    throw new Exception("Не найдено собранных версий. Выполните сборку");
+                LogMessage(ex.Message);
+            }
+            catch (ArgumentOutOfRangeException ex) when(config.Versions.Count == 0)
+            {
+                LogMessage("Не найдено собранных версий. Выполните сборку");
             }
             catch (Exception exception)
             {
@@ -235,7 +261,7 @@ namespace Deployer
                 actualVersion = config.CurrentVersion;
                 ActualVersionLabel.Content = actualVersion;
                 LogMessage("Перестроение завершено, текущая версия"+actualVersion);
-                refresh();
+                Refresh();
                 Save();
             }
             catch (Exception exception)

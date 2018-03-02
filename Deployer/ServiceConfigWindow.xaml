@@ -28,8 +28,10 @@
         <Button x:Name="BuildButton" Content="Update" Margin="0,0,168,146" Click="BuildButton_Click" Height="26" VerticalAlignment="Bottom" Grid.Column="1" HorizontalAlignment="Right" Width="75"/>
         <Label Content="текущая версия" Grid.Column="1" HorizontalAlignment="Left" Margin="117,0,0,146" Width="97" Height="26" VerticalAlignment="Bottom"/>
         <Label x:Name="ActualVersionLabel" Content="1.0" Grid.Column="1" HorizontalAlignment="Left" Margin="117,0,0,103" Width="97" Height="26" VerticalAlignment="Bottom"/>
-        <TextBox x:Name="PathTextBox" HorizontalAlignment="Left" Margin="143,0,0,11" TextWrapping="Wrap" Width="153" Height="23" VerticalAlignment="Bottom" IsEnabled="{Binding IsChecked, ElementName=CheckBoxPath}"/>
+        <TextBox x:Name="PathTextBox" HorizontalAlignment="Left" Margin="143,0,0,11"  Width="153" Height="23" VerticalAlignment="Bottom" IsEnabled="{Binding IsChecked, ElementName=CheckBoxPath}"/>
         <CheckBox x:Name="CheckBoxPath" Content="назначить папку копии" HorizontalAlignment="Left" Margin="143,0,0,55" Width="153" Height="16" VerticalAlignment="Bottom"/>
+        <RadioButton x:Name="RadioButtonExistVersion" Content="exist version" Grid.Column="1" HorizontalAlignment="Left" Margin="99,439,0,0" VerticalAlignment="Top" GroupName="versionType" IsChecked="True" IsThreeState="True"/>
+        <RadioButton x:Name="RadioButtonNewVersion" Content="new version" Grid.Column="1" HorizontalAlignment="Left" Margin="99,472,0,0" VerticalAlignment="Top" GroupName="versionType" IsChecked="True"/>
 
     </Grid>
 </Window>

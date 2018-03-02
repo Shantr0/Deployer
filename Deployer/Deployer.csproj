@@ -87,6 +87,7 @@
     </ApplicationDefinition>
     <Compile Include="Core\ServiceConfigState.cs" />
     <Compile Include="Core\ServiceList.cs" />
+    <Compile Include="DeployState.cs" />
     <Compile Include="ServiceConfigWindow.xaml.cs">
       <DependentUpon>ServiceConfigWindow.xaml</DependentUpon>
     </Compile>
